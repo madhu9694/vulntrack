@@ -1,0 +1,135 @@
+{
+  "@programName": "OWASP ZAP Synthetic Demonstration Exporter",
+  "@version": "2.14.0",
+  "@generated": "2026-10-13T10:00:00Z",
+  "site": [
+    {
+      "@name": "https://auth-lab.vulntrack.local",
+      "@host": "auth-lab.vulntrack.local",
+      "@port": "443",
+      "@ssl": "true",
+      "alerts": [
+        {
+          "pluginid": "40018",
+          "alertRef": "40018",
+          "alert": "SQL Injection - Boolean Based Blind",
+          "name": "SQL Injection - Boolean Based Blind",
+          "riskcode": "3",
+          "confidence": "3",
+          "riskdesc": "High (High)",
+          "desc": "<p>Boolean-based blind SQL injection was detected in the product catalogue endpoint. The database executes injected boolean statements allowing data exfiltration.</p>",
+          "instances": [
+            {
+              "uri": "https://auth-lab.vulntrack.local/catalog/item.php?id=101",
+              "method": "GET",
+              "param": "id",
+              "attack": "101 AND 1=1 --",
+              "evidence": "Item retrieved successfully on TRUE condition"
+            }
+          ],
+          "count": "1",
+          "solution": "<p>Utilize parameterized queries / prepared statements with PDO or SQLAlchemy ORM instead of dynamic string concatenation.</p>",
+          "reference": "https://owasp.org/www-community/attacks/SQL_Injection",
+          "cweid": "89",
+          "wascid": "19"
+        },
+        {
+          "pluginid": "40012",
+          "alertRef": "40012",
+          "alert": "Cross-Site Scripting (Reflected)",
+          "name": "Cross-Site Scripting (Reflected)",
+          "riskcode": "3",
+          "confidence": "2",
+          "riskdesc": "High (Medium)",
+          "desc": "<p>User-supplied query parameter 'search_term' is reflected in the server HTML response without contextual sanitization or output escaping.</p>",
+          "instances": [
+            {
+              "uri": "https://auth-lab.vulntrack.local/search?search_term=test",
+              "method": "GET",
+              "param": "search_term",
+              "attack": "<script>alert(document.cookie)</script>",
+              "evidence": "<script>alert(document.cookie)</script>"
+            }
+          ],
+          "count": "1",
+          "solution": "<p>Implement contextual HTML entity encoding and adopt a strict Content Security Policy (CSP) header.</p>",
+          "reference": "https://owasp.org/www-community/attacks/xss/",
+          "cweid": "79",
+          "wascid": "8"
+        },
+        {
+          "pluginid": "10038",
+          "alertRef": "10038",
+          "alert": "Content Security Policy (CSP) Header Not Set",
+          "name": "Content Security Policy (CSP) Header Not Set",
+          "riskcode": "2",
+          "confidence": "3",
+          "riskdesc": "Medium (High)",
+          "desc": "<p>Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross-Site Scripting (XSS) and data injection attacks.</p>",
+          "instances": [
+            {
+              "uri": "https://auth-lab.vulntrack.local/dashboard",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": ""
+            }
+          ],
+          "count": "1",
+          "solution": "<p>Ensure that your web server, application server, or load balancer sets a Content-Security-Policy response header.</p>",
+          "reference": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP",
+          "cweid": "693",
+          "wascid": "15"
+        },
+        {
+          "pluginid": "10010",
+          "alertRef": "10010",
+          "alert": "Cookie No HttpOnly Flag",
+          "name": "Cookie No HttpOnly Flag",
+          "riskcode": "1",
+          "confidence": "2",
+          "riskdesc": "Low (Medium)",
+          "desc": "<p>A cookie has been set without the HttpOnly flag, which permits JavaScript to read sensitive session tokens.</p>",
+          "instances": [
+            {
+              "uri": "https://auth-lab.vulntrack.local/login",
+              "method": "POST",
+              "param": "session_id",
+              "attack": "",
+              "evidence": "Set-Cookie: session_id=abc12345; Path=/"
+            }
+          ],
+          "count": "1",
+          "solution": "<p>Set the HttpOnly flag on all sensitive authentication and session cookies.</p>",
+          "reference": "https://owasp.org/www-community/HttpOnly",
+          "cweid": "1004",
+          "wascid": "13"
+        },
+        {
+          "pluginid": "10049",
+          "alertRef": "10049",
+          "alert": "Strict-Transport-Security Header Not Set",
+          "name": "Strict-Transport-Security Header Not Set",
+          "riskcode": "1",
+          "confidence": "3",
+          "riskdesc": "Low (High)",
+          "desc": "<p>The HTTP Strict-Transport-Security header is not enforced, allowing potential SSL stripping downgrade attacks.</p>",
+          "instances": [
+            {
+              "uri": "https://auth-lab.vulntrack.local/",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": ""
+            }
+          ],
+          "count": "1",
+          "solution": "<p>Configure the server to send Strict-Transport-Security: max-age=31536000; includeSubDomains header.</p>",
+          "reference": "https://owasp.org/www-project-secure-headers/",
+          "cweid": "319",
+          "wascid": "4"
+        }
+      ]
+    }
+  ]
+}

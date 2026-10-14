@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Internal Server Error (500){% endblock %}
+{% block content %}
+<div class="row justify-content-center text-center py-5">
+  <div class="col-12 col-md-6">
+    <div class="display-1 fw-bold text-danger mb-3">500</div>
+    <h3 class="text-white mb-3">Internal Server Error</h3>
+    <p class="text-muted mb-4">An unexpected error occurred while processing the request. Details have been logged to the audit system.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-orange">
+      <i class="bi bi-speedometer2 me-1"></i> Return to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

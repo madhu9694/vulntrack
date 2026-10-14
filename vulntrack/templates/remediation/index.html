@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Remediation Tracker{% endblock %}
+{% block page_title %}Remediation Tracker{% endblock %}
+{% block page_subtitle %}Track vulnerability fix lifecycles, retesting verification, and accepted risks{% endblock %}
+
+{% block page_actions %}
+<form method="GET" action="{{ url_for('remediation.index') }}" class="d-flex align-items-center gap-2">
+  <select name="assessment_id" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 220px;">
+    <option value="">— All Assessments Combined —</option>
+    {% for a in assessments %}
+      <option value="{{ a.id }}" {% if current_assessment_id == a.id %}selected{% endif %}>
+        {{ a.name }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+{% endblock %}
+
+{% block content %}
+<!-- Progress Bar Overview -->
+<div class="card mb-4">
+  <div class="card-body p-4">
+    <div class="row align-items-center g-3">
+      <div class="col-12 col-md-4">
+        <span class="text-muted small text-uppercase fw-semibold d-block">Overall Remediation Progress</span>
+        <div class="d-flex align-items-baseline gap-2 mt-1">
+          <span class="fs-2 fw-bold text-success">{{ progress_pct }}%</span>
+          <span class="text-muted small">({{ fixed_count }} of {{ total }} findings fixed)</span>
+        </div>
+      </div>
+      <div class="col-12 col-md-8">
+        <div class="progress" style="height: 12px;">
+          <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_pct }}%;" aria-valuenow="{{ progress_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <div class="d-flex justify-content-between text-muted small mt-2">
+          <span><strong class="text-danger">{{ urgent_open|length }}</strong> Critical/High Open</span>
+          <span><strong class="text-purple" style="color: #c084fc;">{{ accepted_count }}</strong> Accepted Risks</span>
+          <span><strong class="text-success">{{ fixed_count }}</strong> Remediated</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Urgent Attention Callout (Critical & High Open Findings) -->
+{% if urgent_open %}
+<div class="card border-danger mb-4">
+  <div class="card-header bg-danger bg-opacity-10 border-danger text-danger d-flex justify-content-between align-items-center py-2">
+    <span><i class="bi bi-fire me-2"></i>Urgent Remediation Required: Critical &amp; High Open Findings ({{ urgent_open|length }})</span>
+    <span class="badge bg-danger">Highest Risk Exposure</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-custom mb-0">
+        <thead>
+          <tr>
+            <th>Vulnerability</th>
+            <th>Severity</th>
+            <th>Risk Score</th>
+            <th>Recommended Fix</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in urgent_open %}
+          <tr>
+            <td>
+              <div class="fw-semibold text-white">
+                <a href="{{ url_for('vulnerabilities.detail', finding_id=f.id) }}" class="text-white text-decoration-none hover-orange">
+                  {{ f.title }}
+                </a>
+              </div>
+              <div class="text-muted small text-truncate" style="max-width: 300px;">{{ f.affected_url }}</div>
+            </td>
+            <td>
+              <span class="badge {% if f.severity == 'Critical' %}badge-crit{% else %}badge-high{% endif %}">{{ f.severity }}</span>
+            </td>
+            <td>
+              <span class="fw-bold text-warning">{{ f.risk_score }}</span>
+            </td>
+            <td class="small text-light" style="max-width: 320px;">
+              {{ f.remediation_recommendation or 'Review finding and apply hardening recommendations.' }}
+            </td>
+            <td class="text-end">
+              <a href="{{ url_for('remediation.update', finding_id=f.id) }}" class="btn btn-sm btn-outline-warning">
+                Update Status
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Status Columns / Kanban Grid -->
+<div class="row g-4">
+  <!-- Open Column -->
+  <div class="col-12 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header border-danger d-flex justify-content-between align-items-center py-2">
+        <span class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i> Open ({{ grouped['Open']|length }})</span>
+        <span class="badge bg-danger">{{ grouped['Open']|length }}</span>
+      </div>
+      <div class="card-body p-2" style="max-height: 600px; overflow-y: auto;">
+        {% for f in grouped['Open'] %}
+        <div class="p-3 mb-2 bg-dark rounded border border-secondary">
+          <div class="d-flex justify-content-between align-items-start mb-1">
+            <span class="badge {% if f.severity == 'Critical' %}badge-crit{% elif f.severity == 'High' %}badge-high{% else %}badge-med{% endif %}">{{ f.severity }}</span>
+            <span class="fw-bold text-warning small">Score: {{ f.risk_score }}</span>
+          </div>
+          <h6 class="mb-1">
+            <a href="{{ url_for('vulnerabilities.detail', finding_id=f.id) }}" class="text-white text-decoration-none hover-orange">{{ f.title }}</a>
+          </h6>
+          <div class="text-muted small text-truncate mb-2">{{ f.affected_url }}</div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted" style="font-size: 0.75rem;">{{ f.assessment.name }}</span>
+            <a href="{{ url_for('remediation.update', finding_id=f.id) }}" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size: 0.75rem;">Update</a>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 small">No open findings in this view.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- In Progress / Retest Pending Column -->
+  <div class="col-12 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header border-primary d-flex justify-content-between align-items-center py-2">
+        <span class="text-primary fw-semibold"><i class="bi bi-clock-history me-1"></i> In Progress &amp; Retest ({{ grouped['In Progress']|length + grouped['Retest Pending']|length }})</span>
+        <span class="badge bg-primary">{{ grouped['In Progress']|length + grouped['Retest Pending']|length }}</span>
+      </div>
+      <div class="card-body p-2" style="max-height: 600px; overflow-y: auto;">
+        {% for f in grouped['In Progress'] + grouped['Retest Pending'] %}
+        <div class="p-3 mb-2 bg-dark rounded border border-secondary">
+          <div class="d-flex justify-content-between align-items-start mb-1">
+            <span class="badge {% if f.remediation_status == 'Retest Pending' %}badge-retest{% else %}badge-inprogress{% endif %}">
+              {{ f.remediation_status }}
+            </span>
+            <span class="fw-bold text-warning small">Score: {{ f.risk_score }}</span>
+          </div>
+          <h6 class="mb-1">
+            <a href="{{ url_for('vulnerabilities.detail', finding_id=f.id) }}" class="text-white text-decoration-none hover-orange">{{ f.title }}</a>
+          </h6>
+          <div class="text-muted small text-truncate mb-2">{{ f.affected_url }}</div>
+          {% if f.retest_result %}
+          <div class="badge bg-secondary mb-2" style="font-size: 0.7rem;">Retest: {{ f.retest_result }}</div>
+          {% endif %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted" style="font-size: 0.75rem;">{{ f.assessment.name }}</span>
+            <a href="{{ url_for('remediation.update', finding_id=f.id) }}" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size: 0.75rem;">Record Retest</a>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 small">No active fixes or pending retests.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Fixed & Accepted Risk Column -->
+  <div class="col-12 col-xl-4">
+    <div class="card h-100">
+      <div class="card-header border-success d-flex justify-content-between align-items-center py-2">
+        <span class="text-success fw-semibold"><i class="bi bi-check2-all me-1"></i> Resolved &amp; Accepted ({{ grouped['Fixed']|length + grouped['Accepted Risk']|length }})</span>
+        <span class="badge bg-success">{{ grouped['Fixed']|length + grouped['Accepted Risk']|length }}</span>
+      </div>
+      <div class="card-body p-2" style="max-height: 600px; overflow-y: auto;">
+        {% for f in grouped['Fixed'] + grouped['Accepted Risk'] %}
+        <div class="p-3 mb-2 bg-dark rounded border border-secondary">
+          <div class="d-flex justify-content-between align-items-start mb-1">
+            <span class="badge {% if f.remediation_status == 'Fixed' %}badge-fixed{% else %}badge-accepted{% endif %}">
+              {{ f.remediation_status }}
+            </span>
+            <span class="text-muted small">{{ f.severity }}</span>
+          </div>
+          <h6 class="mb-1">
+            <a href="{{ url_for('vulnerabilities.detail', finding_id=f.id) }}" class="text-white text-decoration-none hover-orange">{{ f.title }}</a>
+          </h6>
+          {% if f.fixed_at %}
+          <div class="text-success small mb-1" style="font-size: 0.75rem;"><i class="bi bi-calendar-check me-1"></i>Fixed: {{ f.fixed_at|format_date }}</div>
+          {% endif %}
+          {% if f.accepted_risk_justification %}
+          <div class="text-muted small text-truncate mb-1" style="font-size: 0.75rem;">Reason: {{ f.accepted_risk_justification }}</div>
+          {% endif %}
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <span class="text-muted" style="font-size: 0.75rem;">{{ f.assessment.name }}</span>
+            <a href="{{ url_for('remediation.update', finding_id=f.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;">Edit Status</a>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 small">No resolved findings yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

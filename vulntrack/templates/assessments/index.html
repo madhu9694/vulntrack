@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Assessments{% endblock %}
+{% block page_title %}Security Assessments{% endblock %}
+{% block page_subtitle %}Manage authorized penetration testing engagements and target scopes{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('assessments.create') }}" class="btn btn-warning">
+  <i class="bi bi-plus-circle me-1"></i> New Assessment
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="GET" action="{{ url_for('assessments.index') }}" class="row g-2 align-items-center">
+      <div class="col-12 col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control" placeholder="Search by name, target URL, or tester..." value="{{ search_query }}">
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="btn-group btn-group-sm w-100" role="group">
+          <a href="{{ url_for('assessments.index') }}" class="btn btn-outline-secondary {% if not current_status %}active{% endif %}">All</a>
+          <a href="{{ url_for('assessments.index', status='Planned') }}" class="btn btn-outline-secondary {% if current_status == 'Planned' %}active{% endif %}">Planned</a>
+          <a href="{{ url_for('assessments.index', status='In Progress') }}" class="btn btn-outline-secondary {% if current_status == 'In Progress' %}active{% endif %}">In Progress</a>
+          <a href="{{ url_for('assessments.index', status='Completed') }}" class="btn btn-outline-secondary {% if current_status == 'Completed' %}active{% endif %}">Completed</a>
+        </div>
+      </div>
+      <div class="col-12 col-md-4 text-md-end">
+        <button type="submit" class="btn btn-sm btn-outline-warning">Apply Filter</button>
+        <a href="{{ url_for('assessments.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-custom mb-0">
+      <thead>
+        <tr>
+          <th>Assessment Name</th>
+          <th>Target URL</th>
+          <th>Lead Tester</th>
+          <th>Timeline</th>
+          <th>Status</th>
+          <th>Findings</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assessments %}
+        <tr>
+          <td>
+            <div class="fw-semibold text-white">
+              <a href="{{ url_for('assessments.detail', assessment_id=a.id) }}" class="text-white text-decoration-none hover-orange">
+                {{ a.name }}
+              </a>
+            </div>
+            <div class="text-muted small">ID: #{{ a.id }} &bull; Created {{ a.created_at|format_date }}</div>
+          </td>
+          <td>
+            <code class="text-info">{{ a.target_url }}</code>
+          </td>
+          <td>{{ a.tester }}</td>
+          <td class="small text-muted">
+            {{ a.start_date|format_date }} &rarr; {{ a.end_date|format_date }}
+          </td>
+          <td>
+            <span class="badge {% if a.status == 'Completed' %}bg-success{% elif a.status == 'In Progress' %}bg-primary{% elif a.status == 'Planned' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+              {{ a.status }}
+            </span>
+          </td>
+          <td>
+            <span class="badge bg-dark border border-secondary text-white">{{ a.total_findings }} Total</span>
+            {% if a.open_findings > 0 %}
+            <span class="badge bg-danger">{{ a.open_findings }} Open</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <a href="{{ url_for('assessments.detail', assessment_id=a.id) }}" class="btn btn-outline-secondary" title="View Details">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{{ url_for('vulnerabilities.import_zap', assessment_id=a.id) }}" class="btn btn-outline-warning" title="Import ZAP Report">
+                <i class="bi bi-upload"></i>
+              </a>
+              <a href="{{ url_for('reports.download_pdf', assessment_id=a.id) }}" class="btn btn-outline-danger" title="Download PDF Report">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </a>
+              <a href="{{ url_for('assessments.edit', assessment_id=a.id) }}" class="btn btn-outline-secondary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            No assessments found matching the criteria.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

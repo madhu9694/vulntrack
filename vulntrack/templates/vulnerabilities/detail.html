@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}Finding #{{ finding.id }} — {{ finding.title }}{% endblock %}
+{% block page_title %}{{ finding.title }}{% endblock %}
+{% block page_subtitle %}Assessment: {{ finding.assessment.name }} &bull; Discovered: {{ finding.first_discovered_date|format_date }}{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+  <a href="{{ url_for('remediation.update', finding_id=finding.id) }}" class="btn btn-sm btn-outline-warning">
+    <i class="bi bi-tools me-1"></i> Update Status
+  </a>
+  <a href="{{ url_for('vulnerabilities.edit', finding_id=finding.id) }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-pencil me-1"></i> Edit Finding
+  </a>
+  <a href="{{ url_for('assessments.detail', assessment_id=finding.assessment_id) }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back to Assessment
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Left Column: Primary Details -->
+  <div class="col-12 col-lg-8">
+    <!-- Quick Classification Bar -->
+    <div class="card mb-4">
+      <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <span class="badge {% if finding.severity == 'Critical' %}badge-crit{% elif finding.severity == 'High' %}badge-high{% elif finding.severity == 'Medium' %}badge-med{% elif finding.severity == 'Low' %}badge-low{% else %}badge-info{% endif %} px-2 py-1">
+            {{ finding.severity }} Severity
+          </span>
+          <span class="badge {% if finding.remediation_status == 'Fixed' %}badge-fixed{% elif finding.remediation_status == 'Accepted Risk' %}badge-accepted{% elif finding.remediation_status == 'In Progress' %}badge-inprogress{% else %}badge-open{% endif %} px-2 py-1">
+            Status: {{ finding.remediation_status }}
+          </span>
+          <span class="badge bg-dark border border-secondary text-light px-2 py-1">
+            Tool: {{ finding.source_tool }}
+          </span>
+          {% if finding.cwe_id %}
+          <span class="badge bg-dark border border-secondary text-info px-2 py-1">
+            {{ finding.cwe_id }}
+          </span>
+          {% endif %}
+        </div>
+        <div>
+          <span class="text-muted small">Confidence:</span>
+          <span class="fw-semibold text-white small">{{ finding.confidence }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Affected Endpoint Box -->
+    <div class="card mb-4">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-link-45deg text-info me-1"></i>Target Endpoint &amp; Vector</span>
+        <span class="badge bg-dark text-info">{{ finding.http_method }}</span>
+      </div>
+      <div class="card-body p-3">
+        <div class="mb-2">
+          <span class="text-muted small d-block">Affected URL:</span>
+          <code class="text-info fs-6">{{ finding.affected_url }}</code>
+        </div>
+        {% if finding.parameter %}
+        <div>
+          <span class="text-muted small d-block">Vulnerable Parameter:</span>
+          <span class="badge bg-secondary font-monospace">{{ finding.parameter }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="card mb-4">
+      <div class="card-header py-2">
+        <i class="bi bi-file-text text-warning me-1"></i> Vulnerability Description
+      </div>
+      <div class="card-body p-3 text-light" style="line-height: 1.6;">
+        {{ finding.description }}
+      </div>
+    </div>
+
+    <!-- Proof of Concept & Evidence -->
+    {% if finding.evidence %}
+    <div class="card mb-4">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-terminal text-info me-1"></i> Proof of Concept / Technical Evidence</span>
+        <span class="text-muted small">Sanitized Raw Log</span>
+      </div>
+      <div class="card-body p-3">
+        <pre class="code-block mb-0"><code>{{ finding.evidence }}</code></pre>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Remediation Guidance -->
+    <div class="card mb-4">
+      <div class="card-header py-2 text-success">
+        <i class="bi bi-shield-check me-1"></i> Remediation Recommendation
+      </div>
+      <div class="card-body p-3 text-light" style="line-height: 1.6;">
+        {{ finding.remediation_recommendation or "No specific remediation advice provided yet. Apply defensive secure coding standards." }}
+      </div>
+    </div>
+
+    {% if finding.notes %}
+    <!-- Notes -->
+    <div class="card mb-4">
+      <div class="card-header py-2 text-muted">
+        <i class="bi bi-journal-text me-1"></i> Internal Tester Notes
+      </div>
+      <div class="card-body p-3 text-light small">
+        {{ finding.notes }}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right Column: Mathematical Risk Breakdown & Deduplication -->
+  <div class="col-12 col-lg-4">
+    <!-- Risk Prioritization Score Card -->
+    <div class="card border-warning mb-4">
+      <div class="card-header border-warning text-warning d-flex justify-content-between align-items-center py-2">
+        <span><i class="bi bi-speedometer2 me-1"></i> Risk Score Breakdown</span>
+        <span class="badge bg-warning text-dark">{{ finding.risk_priority }}</span>
+      </div>
+      <div class="card-body p-3 text-center">
+        <div class="mb-3">
+          <span class="fs-1 fw-bold text-warning">{{ finding.risk_score }}</span>
+          <span class="text-muted">/100</span>
+        </div>
+        
+        <!-- Component bars -->
+        <div class="text-start small mb-2">
+          <div class="d-flex justify-content-between text-muted mb-1">
+            <span>Severity Weight (40%):</span>
+            <span class="text-white">{{ risk_calc.breakdown.severity.raw }} &rarr; <strong>+{{ risk_calc.breakdown.severity.contribution }}</strong></span>
+          </div>
+          <div class="progress mb-2">
+            <div class="progress-bar bg-danger" style="width: {{ risk_calc.breakdown.severity.raw }}%;"></div>
+          </div>
+
+          <div class="d-flex justify-content-between text-muted mb-1">
+            <span>Exploitability (25%):</span>
+            <span class="text-white">{{ risk_calc.breakdown.exploitability.raw }} &rarr; <strong>+{{ risk_calc.breakdown.exploitability.contribution }}</strong></span>
+          </div>
+          <div class="progress mb-2">
+            <div class="progress-bar bg-warning" style="width: {{ risk_calc.breakdown.exploitability.raw }}%;"></div>
+          </div>
+
+          <div class="d-flex justify-content-between text-muted mb-1">
+            <span>Business Impact (25%):</span>
+            <span class="text-white">{{ risk_calc.breakdown.business_impact.raw }} &rarr; <strong>+{{ risk_calc.breakdown.business_impact.contribution }}</strong></span>
+          </div>
+          <div class="progress mb-2">
+            <div class="progress-bar bg-info" style="width: {{ risk_calc.breakdown.business_impact.raw }}%;"></div>
+          </div>
+
+          <div class="d-flex justify-content-between text-muted mb-1">
+            <span>Exposure Level (10%):</span>
+            <span class="text-white">{{ risk_calc.breakdown.exposure.raw }} &rarr; <strong>+{{ risk_calc.breakdown.exposure.contribution }}</strong></span>
+          </div>
+          <div class="progress mb-3">
+            <div class="progress-bar bg-secondary" style="width: {{ risk_calc.breakdown.exposure.raw }}%;"></div>
+          </div>
+        </div>
+
+        <div class="bg-dark p-2 rounded border border-secondary text-muted font-monospace small" style="font-size: 0.75rem;">
+          {{ risk_calc.formula }}
+        </div>
+        <div class="text-muted small mt-2" style="font-size: 0.7rem;">
+          *Distinct from CVSS Base Score (CVSS: {{ finding.cvss_score or 'N/A' }})
+        </div>
+      </div>
+    </div>
+
+    <!-- OWASP Taxonomy Card -->
+    <div class="card mb-4">
+      <div class="card-header py-2">
+        <i class="bi bi-tag text-warning me-1"></i> OWASP Top 10 Taxonomy
+      </div>
+      <div class="card-body p-3">
+        <div class="fw-semibold text-white mb-1">{{ finding.owasp_category }}</div>
+        <div class="text-muted small">Standard Taxonomy: Top 10:{{ finding.owasp_year }}</div>
+      </div>
+    </div>
+
+    <!-- Remediation Lifecycle Status -->
+    <div class="card mb-4">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-arrow-repeat text-info me-1"></i> Remediation Status</span>
+        <a href="{{ url_for('remediation.update', finding_id=finding.id) }}" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size: 0.75rem;">Update</a>
+      </div>
+      <div class="card-body p-3 small">
+        <div class="mb-2">
+          <span class="text-muted d-block">Current State:</span>
+          <span class="fw-bold text-white">{{ finding.remediation_status }}</span>
+        </div>
+        {% if finding.fixed_at %}
+        <div class="mb-2">
+          <span class="text-muted d-block">Remediation Date:</span>
+          <span class="text-success">{{ finding.fixed_at|format_date }}</span>
+        </div>
+        {% endif %}
+        {% if finding.retest_result %}
+        <div class="mb-2">
+          <span class="text-muted d-block">Retest Outcome:</span>
+          <span class="badge bg-dark border border-warning text-warning">{{ finding.retest_result }}</span>
+        </div>
+        {% endif %}
+        {% if finding.retest_notes %}
+        <div class="mb-2">
+          <span class="text-muted d-block">Retest Notes:</span>
+          <span class="text-light">{{ finding.retest_notes }}</span>
+        </div>
+        {% endif %}
+        {% if finding.accepted_risk_justification %}
+        <div class="p-2 bg-dark rounded border border-purple text-light">
+          <span class="text-warning fw-semibold d-block">Accepted Risk Justification:</span>
+          {{ finding.accepted_risk_justification }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Deduplication Engine Box -->
+    <div class="card mb-4">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-fingerprint text-warning me-1"></i> Duplicate Detection</span>
+        {% if finding.is_duplicate %}
+        <span class="badge bg-warning text-dark">Duplicate</span>
+        {% else %}
+        <span class="badge bg-success">Original Primary</span>
+        {% endif %}
+      </div>
+      <div class="card-body p-3 small">
+        <div class="mb-2">
+          <span class="text-muted d-block">SHA-256 Fingerprint:</span>
+          <code class="text-light font-monospace" style="font-size: 0.7rem; word-break: break-all;">{{ finding.fingerprint_hash }}</code>
+        </div>
+        <div class="mb-2">
+          <span class="text-muted d-block">Duplicate Cluster Group:</span>
+          <span class="badge bg-dark border border-secondary text-info">{{ finding.duplicate_group_id }}</span>
+        </div>
+
+        {% if finding.original_finding %}
+        <div class="mb-2 p-2 bg-dark rounded border border-secondary">
+          <span class="text-muted d-block">Original Finding Reference:</span>
+          <a href="{{ url_for('vulnerabilities.detail', finding_id=finding.original_finding.id) }}" class="text-warning text-decoration-none">
+            #{{ finding.original_finding.id }}: {{ finding.original_finding.title }}
+          </a>
+        </div>
+        {% endif %}
+
+        {% if related_duplicates %}
+        <div class="mt-3">
+          <span class="text-muted d-block mb-1">Other findings with same fingerprint ({{ related_duplicates|length }}):</span>
+          <ul class="list-unstyled mb-0">
+            {% for dup in related_duplicates %}
+            <li class="py-1 border-bottom border-secondary">
+              <a href="{{ url_for('vulnerabilities.detail', finding_id=dup.id) }}" class="text-light text-decoration-none hover-orange">
+                #{{ dup.id }}: {{ dup.title }}
+              </a>
+              <span class="text-muted" style="font-size: 0.7rem;">({{ dup.assessment.name }})</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="mt-3">
+          <form method="POST" action="{{ url_for('vulnerabilities.resolve_duplicate', finding_id=finding.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
+              <i class="bi bi-arrow-left-right me-1"></i> Toggle Duplicate Flag
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

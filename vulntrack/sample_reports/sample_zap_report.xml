@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OWASPZAPReport version="2.14.0" generated="2026-10-13T10:00:00Z">
+  <site name="https://auth-lab.vulntrack.local" host="auth-lab.vulntrack.local" port="443" ssl="true">
+    <alerts>
+      <alertitem>
+        <pluginid>40018</pluginid>
+        <alert>SQL Injection in Authentication Service</alert>
+        <name>SQL Injection in Authentication Service</name>
+        <riskcode>3</riskcode>
+        <confidence>3</confidence>
+        <riskdesc>High (High)</riskdesc>
+        <desc>&lt;p&gt;SQL Injection error detected in the username parameter during authentication validation.&lt;/p&gt;</desc>
+        <instances>
+          <instance>
+            <uri>https://auth-lab.vulntrack.local/api/auth/login</uri>
+            <method>POST</method>
+            <param>username</param>
+            <attack>' OR 1=1 --</attack>
+            <evidence>syntax error near 'OR 1=1'</evidence>
+          </instance>
+        </instances>
+        <solution>&lt;p&gt;Use parameterized SQL queries.&lt;/p&gt;</solution>
+        <cweid>89</cweid>
+      </alertitem>
+      <alertitem>
+        <pluginid>10020</pluginid>
+        <alert>Anti-Clickjacking X-Frame-Options Header Missing</alert>
+        <name>Anti-Clickjacking X-Frame-Options Header Missing</name>
+        <riskcode>2</riskcode>
+        <confidence>3</confidence>
+        <riskdesc>Medium (High)</riskdesc>
+        <desc>&lt;p&gt;The response does not include an X-Frame-Options header or CSP frame-ancestors directive.&lt;/p&gt;</desc>
+        <instances>
+          <instance>
+            <uri>https://auth-lab.vulntrack.local/profile</uri>
+            <method>GET</method>
+            <param></param>
+            <evidence></evidence>
+          </instance>
+        </instances>
+        <solution>&lt;p&gt;Set X-Frame-Options: DENY or SAMEORIGIN.&lt;/p&gt;</solution>
+        <cweid>1021</cweid>
+      </alertitem>
+    </alerts>
+  </site>
+</OWASPZAPReport>

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="text-center mb-4">
+      <div class="d-inline-flex p-3 rounded-circle bg-dark border border-warning mb-3">
+        <i class="bi bi-shield-lock-fill text-warning fs-1"></i>
+      </div>
+      <h3 class="fw-bold text-white mb-1">Vuln<span class="text-warning">Track</span></h3>
+      <p class="text-muted small">VAPT Vulnerability Management &amp; Risk Prioritization</p>
+    </div>
+
+    <div class="card shadow-lg">
+      <div class="card-header border-bottom border-secondary py-3 text-center">
+        <h5 class="mb-0 fw-semibold text-white">Sign In to Platform</h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('auth.login') }}">
+          {{ form.hidden_tag() }}
+          
+          <div class="mb-3">
+            <label class="form-label" for="username">Username</label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-person"></i></span>
+              {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), id="username", placeholder="Enter username", autofocus=true) }}
+            </div>
+            {% for error in form.username.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <div class="input-group">
+              <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-key"></i></span>
+              {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), id="password", placeholder="Enter password") }}
+            </div>
+            {% for error in form.password.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3 form-check">
+            {{ form.remember_me(class="form-check-input", id="remember_me") }}
+            <label class="form-check-label text-muted small" for="remember_me">Remember this session</label>
+          </div>
+
+          <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-orange py-2">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+            </button>
+          </div>
+        </form>
+      </div>
+      <div class="card-footer text-center py-3">
+        <span class="text-muted small">
+          <i class="bi bi-info-circle me-1"></i> Demo Logins: <code>admin</code> / <code>Admin@VulnTrack2026!</code> (or <code>student</code> / <code>Student@VulnTrack2026!</code>)
+        </span>
+      </div>
+    </div>
+
+    <div class="text-center mt-3 text-muted small">
+      Cybersecurity Lab Project &bull; 2nd Year B.Tech Computer Science &amp; Engineering.
+    </div>
+  </div>
+</div>
+{% endblock %}

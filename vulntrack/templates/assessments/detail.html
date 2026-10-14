@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}{{ assessment.name }}{% endblock %}
+{% block page_title %}{{ assessment.name }}{% endblock %}
+{% block page_subtitle %}Assessment Engagement Overview &bull; Target: {{ assessment.target_url }}{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+  <a href="{{ url_for('vulnerabilities.import_zap', assessment_id=assessment.id) }}" class="btn btn-sm btn-outline-warning">
+    <i class="bi bi-upload me-1"></i> Import ZAP Report
+  </a>
+  <a href="{{ url_for('vulnerabilities.create', assessment_id=assessment.id) }}" class="btn btn-sm btn-orange">
+    <i class="bi bi-plus-circle me-1"></i> Add Finding
+  </a>
+  <a href="{{ url_for('reports.download_pdf', assessment_id=assessment.id) }}" class="btn btn-sm btn-outline-danger">
+    <i class="bi bi-file-earmark-pdf me-1"></i> PDF Report
+  </a>
+  <a href="{{ url_for('assessments.edit', assessment_id=assessment.id) }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-pencil me-1"></i> Edit
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Overview Card -->
+<div class="card mb-4">
+  <div class="card-body p-4">
+    <div class="row g-4 align-items-center">
+      <div class="col-12 col-md-8">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge {% if assessment.status == 'Completed' %}bg-success{% elif assessment.status == 'In Progress' %}bg-primary{% else %}bg-secondary{% endif %} px-2 py-1">
+            {{ assessment.status }}
+          </span>
+          <span class="text-muted small">Engagement ID: #{{ assessment.id }}</span>
+          <span class="text-muted small">&bull; Created {{ assessment.created_at|format_date }}</span>
+        </div>
+        <h5 class="text-white mb-2">
+          Target: <a href="{{ assessment.target_url }}" target="_blank" rel="noopener" class="text-info text-decoration-none font-monospace">{{ assessment.target_url }}</a>
+        </h5>
+        <div class="text-muted small mb-2">
+          <strong class="text-light">Lead Tester:</strong> {{ assessment.tester }} &bull; 
+          <strong class="text-light">Window:</strong> {{ assessment.start_date|format_date }} &rarr; {{ assessment.end_date|format_date }}
+        </div>
+        {% if assessment.scope_notes %}
+        <div class="bg-dark p-3 rounded border border-secondary text-light small mt-2">
+          <strong class="text-warning">Scope &amp; Constraints:</strong> {{ assessment.scope_notes }}
+        </div>
+        {% endif %}
+      </div>
+      <div class="col-12 col-md-4 text-md-end">
+        <div class="p-3 bg-dark rounded border border-secondary text-center">
+          <span class="text-muted small text-uppercase fw-semibold d-block">Aggregate Risk Score</span>
+          <span class="fs-2 fw-bold text-warning">{{ assessment.aggregate_risk_score }}</span>
+          <div class="d-flex justify-content-center gap-2 mt-2">
+            <span class="badge bg-secondary">{{ assessment.total_findings }} Findings</span>
+            <span class="badge bg-danger">{{ assessment.critical_high_count }} Crit/High</span>
+            <span class="badge bg-success">{{ assessment.fixed_count }} Fixed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Findings Header -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-bold text-white mb-0">
+    <i class="bi bi-shield-exclamation text-warning me-2"></i>Identified Vulnerability Findings ({{ findings|length }})
+  </h5>
+  <div class="text-muted small">
+    Sorted by highest risk score
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-custom mb-0">
+      <thead>
+        <tr>
+          <th>Title &amp; Endpoint</th>
+          <th>Severity</th>
+          <th>Risk Score</th>
+          <th>OWASP Category</th>
+          <th>Tool</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in findings %}
+        <tr class="{% if f.is_duplicate %}opacity-75{% endif %}">
+          <td>
+            <div class="fw-semibold text-white">
+              <a href="{{ url_for('vulnerabilities.detail', finding_id=f.id) }}" class="text-white text-decoration-none hover-orange">
+                {{ f.title }}
+              </a>
+              {% if f.is_duplicate %}
+                <span class="badge bg-dark border border-secondary text-muted ms-1" title="Duplicate finding">Duplicate</span>
+              {% endif %}
+            </div>
+            <div class="text-muted small text-truncate" style="max-width: 320px;">
+              <span class="badge bg-dark text-info me-1">{{ f.http_method }}</span>
+              {{ f.affected_url }}
+            </div>
+          </td>
+          <td>
+            <span class="badge {% if f.severity == 'Critical' %}badge-crit{% elif f.severity == 'High' %}badge-high{% elif f.severity == 'Medium' %}badge-med{% elif f.severity == 'Low' %}badge-low{% else %}badge-info{% endif %}">
+              {{ f.severity }}
+            </span>
+          </td>
+          <td>
+            <span class="fw-bold text-warning">{{ f.risk_score }}</span>
+            <span class="text-muted small d-block" style="font-size: 0.7rem;">{{ f.risk_priority }}</span>
+          </td>
+          <td>
+            <span class="badge bg-dark border border-secondary text-light small text-truncate" style="max-width: 180px;" title="{{ f.owasp_category }}">
+              {{ f.owasp_category.split('—')[0].strip() if '—' in f.owasp_category else f.owasp_category }}
+            </span>
+          </td>
+          <td>
+            <span class="badge bg-secondary text-light small">{{ f.source_tool }}</span>
+          </td>
+          <td>
+            <span class="badge {% if f.remediation_status == 'Fixed' %}badge-fixed{% elif f.remediation_status == 'Accepted Risk' %}badge-accepted{% elif f.remediation_status == 'In Progress' %}badge-inprogress{% else %}badge-open{% endif %}">
+              {{ f.remediation_status }}
+            </span>
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <a href="{{ url_for('vulnerabilities.detail', finding_id=f.id) }}" class="btn btn-outline-secondary" title="View Details">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{{ url_for('remediation.update', finding_id=f.id) }}" class="btn btn-outline-warning" title="Update Status">
+                <i class="bi bi-check2-circle"></i>
+              </a>
+              <a href="{{ url_for('vulnerabilities.edit', finding_id=f.id) }}" class="btn btn-outline-secondary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center py-5">
+            <i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i>
+            <span class="text-muted">No vulnerabilities recorded in this assessment yet.</span>
+            <div class="mt-3">
+              <a href="{{ url_for('vulnerabilities.import_zap', assessment_id=assessment.id) }}" class="btn btn-sm btn-outline-warning me-2">
+                <i class="bi bi-upload me-1"></i> Import ZAP Scan
+              </a>
+              <a href="{{ url_for('vulnerabilities.create', assessment_id=assessment.id) }}" class="btn btn-sm btn-orange">
+                <i class="bi bi-plus-circle me-1"></i> Add Manual Finding
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

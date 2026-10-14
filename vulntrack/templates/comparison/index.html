@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}Assessment Comparison{% endblock %}
+{% block page_title %}Before-and-After Assessment Comparison{% endblock %}
+{% block page_subtitle %}Evaluate remediation efficacy, risk reduction percentage, and new or persisting findings{% endblock %}
+
+{% block content %}
+<!-- Selection Form -->
+<div class="card mb-4">
+  <div class="card-body p-4">
+    <form method="GET" action="{{ url_for('comparison.index') }}" class="row g-3 align-items-end">
+      <div class="col-12 col-md-5">
+        <label class="form-label text-light small fw-semibold">1. Baseline Assessment (Pre-Remediation)</label>
+        <select name="baseline_id" class="form-select">
+          <option value="">— Select Baseline Assessment —</option>
+          {% for a in assessments %}
+            <option value="{{ a.id }}" {% if baseline_id == a.id %}selected{% endif %}>
+              #{{ a.id }}: {{ a.name }} ({{ a.findings.count() }} findings)
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-md-5">
+        <label class="form-label text-light small fw-semibold">2. Retest / Follow-Up Assessment (Post-Remediation)</label>
+        <select name="retest_id" class="form-select">
+          <option value="">— Select Retest Assessment —</option>
+          {% for a in assessments %}
+            <option value="{{ a.id }}" {% if retest_id == a.id %}selected{% endif %}>
+              #{{ a.id }}: {{ a.name }} ({{ a.findings.count() }} findings)
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <button type="submit" class="btn btn-orange w-100">
+          <i class="bi bi-arrow-left-right me-1"></i> Compare
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if comparison %}
+<!-- Metric Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card p-3" style="border-left: 4px solid #10b981;">
+      <span class="text-muted small fw-medium">Risk Score Reduction</span>
+      <div class="stat-value text-success mt-1">{{ comparison.metrics.risk_reduction_pct }}%</div>
+      <div class="text-muted small">Aggregate Risk: {{ comparison.baseline.aggregate_risk }} &rarr; {{ comparison.retest.aggregate_risk }}</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card p-3" style="border-left: 4px solid #3b82f6;">
+      <span class="text-muted small fw-medium">Findings Reduction</span>
+      <div class="stat-value text-primary mt-1">{{ comparison.metrics.findings_reduction_pct }}%</div>
+      <div class="text-muted small">Total: {{ comparison.baseline.total_findings }} &rarr; {{ comparison.retest.total_findings }}</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card p-3" style="border-left: 4px solid #10b981;">
+      <span class="text-muted small fw-medium">Fixed / Remediated</span>
+      <div class="stat-value text-success mt-1">{{ comparison.metrics.fixed_count }}</div>
+      <div class="text-muted small">Confirmed patches verified</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card p-3" style="border-left: 4px solid {% if comparison.metrics.new_count > 0 %}#ef4444{% else %}#334155{% endif %};">
+      <span class="text-muted small fw-medium">New Vulnerabilities</span>
+      <div class="stat-value {% if comparison.metrics.new_count > 0 %}text-danger{% else %}text-muted{% endif %} mt-1">
+        {{ comparison.metrics.new_count }}
+      </div>
+      <div class="text-muted small">Introduced in retest scan</div>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison Breakdown Table -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header py-3">
+        <h5 class="mb-0 text-white">Side-by-Side Scope Metrics</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-custom mb-0">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Baseline: {{ comparison.baseline.name }}</th>
+              <th>Retest: {{ comparison.retest.name }}</th>
+              <th>Net Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Total Vulnerabilities</strong></td>
+              <td>{{ comparison.baseline.total_findings }}</td>
+              <td>{{ comparison.retest.total_findings }}</td>
+              <td>
+                <span class="badge {% if comparison.baseline.total_findings >= comparison.retest.total_findings %}bg-success{% else %}bg-danger{% endif %}">
+                  {{ comparison.retest.total_findings - comparison.baseline.total_findings }}
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Critical &amp; High Findings</strong></td>
+              <td><span class="badge badge-crit">{{ comparison.baseline.crit_high_count }}</span></td>
+              <td><span class="badge badge-crit">{{ comparison.retest.crit_high_count }}</span></td>
+              <td>
+                <span class="badge {% if comparison.baseline.crit_high_count >= comparison.retest.crit_high_count %}bg-success{% else %}bg-danger{% endif %}">
+                  {{ comparison.retest.crit_high_count - comparison.baseline.crit_high_count }}
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Aggregate Open Risk Score</strong></td>
+              <td><span class="text-warning fw-bold">{{ comparison.baseline.aggregate_risk }}</span></td>
+              <td><span class="text-warning fw-bold">{{ comparison.retest.aggregate_risk }}</span></td>
+              <td>
+                <span class="badge bg-success">
+                  -{{ (comparison.baseline.aggregate_risk - comparison.retest.aggregate_risk)|round(2) }} pts ({{ comparison.metrics.risk_reduction_pct }}%)
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Severity Breakdown</strong></td>
+              <td>
+                <small class="text-muted">
+                  Crit: {{ comparison.baseline.severity_distribution.Critical }} | High: {{ comparison.baseline.severity_distribution.High }} | Med: {{ comparison.baseline.severity_distribution.Medium }}
+                </small>
+              </td>
+              <td>
+                <small class="text-muted">
+                  Crit: {{ comparison.retest.severity_distribution.Critical }} | High: {{ comparison.retest.severity_distribution.High }} | Med: {{ comparison.retest.severity_distribution.Medium }}
+                </small>
+              </td>
+              <td><span class="badge bg-secondary">Calculated</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Item Lists -->
+<div class="row g-4">
+  <!-- Fixed Items -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header border-success text-success py-2 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-check-circle me-1"></i> Remediated Findings ({{ comparison.lists.fixed_or_remediated|length }})</span>
+        <span class="badge bg-success">{{ comparison.lists.fixed_or_remediated|length }}</span>
+      </div>
+      <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+        {% for f in comparison.lists.fixed_or_remediated %}
+        <div class="p-3 mb-2 bg-dark rounded border border-secondary">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="badge {% if f.severity == 'Critical' %}badge-crit{% elif f.severity == 'High' %}badge-high{% else %}badge-med{% endif %}">{{ f.severity }}</span>
+            <span class="badge bg-success">Fixed</span>
+          </div>
+          <div class="fw-semibold text-white">{{ f.title }}</div>
+          <div class="text-muted small text-truncate">{{ f.url }}</div>
+          {% if f.notes %}
+          <div class="text-light small mt-1"><i class="bi bi-info-circle me-1 text-info"></i>{{ f.notes }}</div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 small">No confirmed remediated findings in this comparison.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Persisting Open Items -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header border-warning text-warning py-2 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-exclamation-triangle me-1"></i> Persisting Open Findings ({{ comparison.lists.persisting_open|length }})</span>
+        <span class="badge bg-warning text-dark">{{ comparison.lists.persisting_open|length }}</span>
+      </div>
+      <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+        {% for f in comparison.lists.persisting_open %}
+        <div class="p-3 mb-2 bg-dark rounded border border-secondary">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="badge {% if f.severity == 'Critical' %}badge-crit{% elif f.severity == 'High' %}badge-high{% else %}badge-med{% endif %}">{{ f.severity }}</span>
+            <span class="fw-bold text-warning small">Score: {{ f.retest_score }}</span>
+          </div>
+          <div class="fw-semibold text-white">{{ f.title }}</div>
+          <div class="text-muted small text-truncate">{{ f.url }}</div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 small">No persisting open findings.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Newly Introduced Items -->
+  {% if comparison.lists.new_findings %}
+  <div class="col-12 col-lg-6">
+    <div class="card border-danger h-100">
+      <div class="card-header border-danger text-danger py-2 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-plus-circle me-1"></i> Newly Introduced Findings ({{ comparison.lists.new_findings|length }})</span>
+        <span class="badge bg-danger">{{ comparison.lists.new_findings|length }}</span>
+      </div>
+      <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+        {% for f in comparison.lists.new_findings %}
+        <div class="p-3 mb-2 bg-dark rounded border border-danger">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="badge {% if f.severity == 'Critical' %}badge-crit{% elif f.severity == 'High' %}badge-high{% else %}badge-med{% endif %}">{{ f.severity }}</span>
+            <span class="fw-bold text-danger small">Risk: {{ f.risk_score }}</span>
+          </div>
+          <div class="fw-semibold text-white">{{ f.title }}</div>
+          <div class="text-muted small text-truncate">{{ f.url }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Not Observed in Retest Items -->
+  {% if comparison.lists.not_observed_in_retest %}
+  <div class="col-12 col-lg-6">
+    <div class="card border-secondary h-100">
+      <div class="card-header border-secondary text-muted py-2 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-question-circle me-1"></i> Not Observed in Retest Scan ({{ comparison.lists.not_observed_in_retest|length }})</span>
+        <span class="badge bg-secondary">{{ comparison.lists.not_observed_in_retest|length }}</span>
+      </div>
+      <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+        {% for f in comparison.lists.not_observed_in_retest %}
+        <div class="p-3 mb-2 bg-dark rounded border border-secondary">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="badge badge-info">{{ f.severity }}</span>
+            <span class="badge bg-secondary text-light">Unconfirmed</span>
+          </div>
+          <div class="fw-semibold text-white">{{ f.title }}</div>
+          <div class="text-muted small text-truncate">{{ f.url }}</div>
+          <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+            *Missing in retest scan, but not yet manually signed off as remediated.
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% elif baseline_id and retest_id %}
+<div class="card p-5 text-center text-muted">
+  <i class="bi bi-exclamation-triangle fs-2 d-block mb-2"></i>
+  Unable to generate comparison. Please ensure both selected assessments contain valid vulnerability records.
+</div>
+{% else %}
+<div class="card p-5 text-center text-muted">
+  <i class="bi bi-arrow-left-right fs-2 text-warning d-block mb-2"></i>
+  Select a Baseline assessment and a Follow-Up/Retest assessment above to calculate comparative risk metrics.
+</div>
+{% endif %}
+
+{% endblock %}

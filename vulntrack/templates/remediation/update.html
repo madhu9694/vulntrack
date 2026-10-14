@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Update Status — Finding #{{ finding.id }}{% endblock %}
+{% block page_title %}Update Remediation Status{% endblock %}
+{% block page_subtitle %}Finding #{{ finding.id }}: {{ finding.title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header py-3">
+        <h5 class="card-title mb-0 text-white">Record Remediation / Retest Verification</h5>
+      </div>
+      <div class="card-body p-4">
+        <!-- Finding context header -->
+        <div class="p-3 bg-dark rounded border border-secondary mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="badge {% if finding.severity == 'Critical' %}badge-crit{% elif finding.severity == 'High' %}badge-high{% else %}badge-med{% endif %}">{{ finding.severity }}</span>
+            <span class="text-warning fw-bold small">Score: {{ finding.risk_score }}</span>
+          </div>
+          <div class="fw-semibold text-white">{{ finding.title }}</div>
+          <div class="text-muted small text-truncate">{{ finding.affected_url }}</div>
+        </div>
+
+        <form method="POST">
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            <label class="form-label" for="remediation_status">Remediation Status <span class="text-danger">*</span></label>
+            {{ form.remediation_status(class="form-select", id="remediation_status") }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="retest_result">Retest Verification Outcome</label>
+            {{ form.retest_result(class="form-select", id="retest_result") }}
+            <div class="form-text text-muted">
+              Record outcome after re-executing security test against the patched endpoint.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="retest_notes">Retest Notes / Verification Details</label>
+            {{ form.retest_notes(class="form-control", id="retest_notes", rows=3, placeholder="Document retest commands, HTTP response codes, or tester observations...") }}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label" for="accepted_risk_justification">Accepted Risk Business Justification</label>
+            {{ form.accepted_risk_justification(class="form-control", id="accepted_risk_justification", rows=3, placeholder="Required if status is 'Accepted Risk'. State compensating controls, business context, or sunset timeline...") }}
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{{ url_for('remediation.index', assessment_id=finding.assessment_id) }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-orange">
+              <i class="bi bi-check2-circle me-1"></i> Update Status
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

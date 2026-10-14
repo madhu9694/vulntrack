@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Create Assessment{% endblock %}
+{% block page_title %}New Security Assessment{% endblock %}
+{% block page_subtitle %}Define an authorized penetration testing engagement and scope boundaries{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <!-- Authorization Warning Banner -->
+    <div class="auth-warning-banner mb-4">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div>
+          <strong class="text-white">Strict Rules of Engagement:</strong>
+          Security assessments must strictly target applications you own or for which you hold explicit, formal authorization. Unauthorized testing is illegal.
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header py-3">
+        <h5 class="card-title mb-0 text-white">Assessment Engagement Details</h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST">
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            <label class="form-label" for="name">Assessment Name <span class="text-danger">*</span></label>
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), id="name", placeholder="e.g. Q4 Core Web Application VAPT") }}
+            {% for error in form.name.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="target_url">Target URL / Base Host <span class="text-danger">*</span></label>
+            {{ form.target_url(class="form-control" + (" is-invalid" if form.target_url.errors else ""), id="target_url", placeholder="e.g. https://portal.target-domain.local") }}
+            {% for error in form.target_url.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="tester">Security Tester / Student Name <span class="text-danger">*</span></label>
+              {{ form.tester(class="form-control" + (" is-invalid" if form.tester.errors else ""), id="tester", placeholder="e.g. Aman Sharma (Student Pentester - Roll: CS23B042)") }}
+              {% for error in form.tester.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="status">Assessment Status</label>
+              {{ form.status(class="form-select", id="status") }}
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="start_date">Start Date</label>
+              {{ form.start_date(class="form-control", id="start_date", type="date") }}
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="end_date">End Date</label>
+              {{ form.end_date(class="form-control", id="end_date", type="date") }}
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label" for="scope_notes">Scope, Exclusions &amp; Testing Notes</label>
+            {{ form.scope_notes(class="form-control", id="scope_notes", rows=4, placeholder="Document in-scope paths, out-of-scope third-party APIs, testing accounts, and rate-limiting limits...") }}
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <a href="{{ url_for('assessments.index') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-orange">
+              <i class="bi bi-check2-circle me-1"></i> Save Assessment
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
